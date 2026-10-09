@@ -10,7 +10,7 @@ and move them through their lifecycle.
 ## The assignment
 
 You are joining a team that already has this app working. Complete the tasks **in order**.
-Full requirements are in the assignment PDF.
+Full requirements are in **[`ASSIGNMENT_CANDIDATE.md`](ASSIGNMENT_CANDIDATE.md)**.
 
 | # | Task | Done looks like | Effort |
 | --- | --- | --- | --- |
