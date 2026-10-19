@@ -31,6 +31,9 @@ public sealed class Agent : AggregateRoot
 
     public string Email { get; private set; } = string.Empty;
 
+    /// <summary>The one-way password hash used to authenticate this agent.</summary>
+    public string PasswordHash { get; private set; } = string.Empty;
+
     /// <summary>Inactive agents keep their history but take no new work.</summary>
     public bool IsActive { get; private set; }
 
@@ -51,6 +54,13 @@ public sealed class Agent : AggregateRoot
         }
 
         _specializations.Add(new AgentSpecialization(categoryId));
+    }
+
+    /// <summary>Stores a hash produced by a vetted password hasher, never a plain password.</summary>
+    public void SetPasswordHash(string passwordHash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
+        PasswordHash = passwordHash;
     }
 
     /// <summary>Stops the agent from taking new work. Their history is kept.</summary>
