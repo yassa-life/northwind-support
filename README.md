@@ -53,6 +53,16 @@ settles, while dropdown, checkbox, sorting, and paging changes request tickets i
 regression test changes only the status filter and verifies that the request is sent immediately
 with `status=InProgress` and `page=1`.
 
+### Server-side ticket filtering
+
+Ticket filters are applied to the EF Core `IQueryable` before `CountAsync`, sorting, `Skip`, and
+`Take`. Exact-match filters, unassigned-only, and trimmed search conditions compose using AND, so
+the returned items, `totalCount`, and pager describe the same filtered set. Search covers ticket
+title, reference, and customer name, while blank search text is ignored.
+
+SQLite query tests cover exact priority, combined filters, customer-name search, and filtered
+counts without requiring the development SQL Server.
+
 ---
 
 ## Quick start
@@ -101,7 +111,7 @@ Both pass on a clean checkout and neither needs a database.
 
 | Endpoint | Description |
 | --- | --- |
-| `GET /api/tickets` | Paged list with `search`, `status`, `priority`, `categoryId`, `customerId`, `assignedAgentId`, `unassignedOnly`, `sortBy`, `sortDirection`. **Filters are accepted but not applied yet** (Task 1). |
+| `GET /api/tickets` | Paged list with `search`, `status`, `priority`, `categoryId`, `customerId`, `assignedAgentId`, `unassignedOnly`, `sortBy`, `sortDirection`. Filters are applied before counting and paging. |
 | `GET /api/tickets/{id}` | One ticket |
 | `POST /api/tickets` | Create a ticket |
 | `PATCH /api/tickets/{id}/status` · `/assignment` | Change status / assignee |
