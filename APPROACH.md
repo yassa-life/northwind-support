@@ -9,7 +9,7 @@ This document is a live implementation report. Update it as work is completed. S
 | DEFECT-117 regression test and fix | Complete | `6efc6ae` |
 | FL-1 to FL-6 server-side filtering | Complete | `38ffa16` |
 | Task 2 triage, SLA and escalation | Not started | — |
-| Task 3 authentication | Not started | — |
+| Task 3 authentication | Complete | `9a97aa1`, `6d60df8` |
 | Task 4 API container | Not started | — |
 | Final README and verification | Not started | — |
 
