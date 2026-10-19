@@ -139,7 +139,9 @@ Five API behaviour tests cover generic wrong-password/unknown-email responses, i
 missing-token rejection, successful login, token acceptance, and the `/me` identity. Frontend tests
 cover bearer-token attachment and clearing the session on `401`. The full backend suite, frontend
 suite, lint, type-check, and production web build passed. The generated migration was also applied
-successfully to the local SQL Server database. Backend commit: `9a97aa1`. Frontend commit: `6d60df8`.
+successfully to the local SQL Server database. A live request then signed in as the seeded Alex Turner
+account, returned a token, and used that token successfully with `/api/auth/me`. Backend commit:
+`9a97aa1`. Frontend commit: `6d60df8`.
 
 ## Task 4 — API container
 
