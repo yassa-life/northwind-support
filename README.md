@@ -63,6 +63,26 @@ title, reference, and customer name, while blank search text is ignored.
 SQLite query tests cover exact priority, combined filters, customer-name search, and filtered
 counts without requiring the development SQL Server.
 
+### Login and authentication
+
+Agents authenticate with their existing email and a one-way ASP.NET Identity password hash stored
+on the `Agent` row. A separate users table was rejected because this application has only one user
+type and the additional one-to-one lifecycle would add complexity without separating any real
+responsibility yet.
+
+`POST /api/auth/login` returns a signed JWT containing the agent ID, name, and email. Tokens expire
+after 60 minutes. Unknown email, incorrect password, and inactive-agent attempts all return the same
+generic `401` response. `GET /api/auth/me` returns the signed-in agent, and a fallback authorization
+policy protects every other controller action. The login endpoint and development Swagger UI remain
+public. JWT settings come from configuration and can be overridden with the `Jwt__...` environment
+variables shown in `.env.example`; production must provide a long random signing key.
+
+The web app stores the session in `localStorage`, attaches the bearer token through the shared API
+client, protects application routes, returns users to their originally requested page, and clears
+the session after logout or any `401`. `localStorage` keeps the exercise simple across page reloads,
+but JavaScript can read it, so an XSS vulnerability could steal the token. A production system would
+normally consider a secure, HttpOnly cookie alongside CSRF protection and a fuller session design.
+
 ---
 
 ## Quick start
@@ -85,6 +105,18 @@ npm run web                   # terminal 2: React dev server
 
 In Development the API applies migrations and seeds demo data on startup. **Never commit real
 credentials.**
+
+### Development login
+
+Use any active seeded agent. For example:
+
+```text
+Email: alex.turner@northwind-support.example
+Password: LocalAgent123!
+```
+
+The password is an obvious local fixture. It is hashed during development seeding and must not be
+used outside local development.
 
 **Visual Studio 2026:** run `npm run db:up`, open `SupportDesk.sln`, set
 **SupportDesk.Presentation** as the startup project, and press F5 on the **https** profile.
@@ -111,6 +143,8 @@ Both pass on a clean checkout and neither needs a database.
 
 | Endpoint | Description |
 | --- | --- |
+| `POST /api/auth/login` | Public login; returns a JWT, expiry, and agent details |
+| `GET /api/auth/me` | Current authenticated agent |
 | `GET /api/tickets` | Paged list with `search`, `status`, `priority`, `categoryId`, `customerId`, `assignedAgentId`, `unassignedOnly`, `sortBy`, `sortDirection`. Filters are applied before counting and paging. |
 | `GET /api/tickets/{id}` | One ticket |
 | `POST /api/tickets` | Create a ticket |
@@ -118,9 +152,18 @@ Both pass on a clean checkout and neither needs a database.
 | `GET /api/customers` · `/api/agents` · `/api/categories` | Reference data |
 
 Errors are `ProblemDetails`: `400` validation, `404` not found, `409` conflict or business rule.
+Except for login and development Swagger, API access requires `Authorization: Bearer <token>`.
 
 **Seed data:** 5 categories, 6 customers (3 Premium), 6 agents (one inactive, one at their limit)
 and 40 tickets across every status, priority and SLA state.
+
+## Known limitations
+
+- There is no registration, password reset, email verification, OAuth/SSO, refresh token, MFA,
+  account lockout, rate limiting, or roles matrix; these are deliberately outside the assignment.
+- The browser token storage is intentionally simple and has the XSS trade-off described above.
+- HTTPS termination, secret rotation, and production identity administration are deployment concerns
+  and are not implemented in this local exercise.
 
 ## Troubleshooting
 

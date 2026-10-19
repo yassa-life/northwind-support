@@ -103,19 +103,43 @@ both exited successfully. Commit: `38ffa16`. Time was not recorded and must not 
 
 ### Credential model
 
-**Decision required.** Explain whether password hashes are stored with Agent or in a linked user table, including the rejected alternative.
+The password hash is stored directly on `Agent`. Every account in this application is an agent, so
+a linked users table would create a one-to-one record and lifecycle without enabling a second user
+type or a separate identity boundary. The linked-table alternative was rejected for that unnecessary
+complexity. `AddAgentAuthentication` adds the required column, and the development seeder fills new
+and pre-existing empty hashes at seed time.
 
 ### Password and token security
 
-**Not started.** Record the vetted hasher, generic failure behaviour, JWT configuration source, claims and token lifetime.
+ASP.NET Identity `PasswordHasher<Agent>` supplies the salted, one-way PBKDF2 hash and verification;
+plain passwords are never stored or logged. Unknown email, incorrect password, and inactive agent
+attempts use the same `401` message so the endpoint does not reveal which accounts exist.
+
+JWT configuration is bound from the `Jwt` configuration section, with production overrides expected
+through `Jwt__...` environment variables. The signing key must be at least 32 characters and is not
+hard-coded as a real secret. Tokens contain agent ID, full name, email, and a unique token ID, and
+expire after 60 minutes. A fallback policy protects existing controllers centrally while `[AllowAnonymous]`
+keeps login public; Swagger middleware remains public in Development.
 
 ### Frontend session
 
-**Decision required.** Record the token-storage location and its XSS/security trade-off. Describe protected routing, return URL, logout and global 401 handling.
+The React app stores the token, expiry, and display data in `localStorage`, chosen for a small exercise
+because it survives refreshes and keeps the API client simple. The accepted trade-off is that injected
+JavaScript could read it if an XSS defect existed; a production design should consider a secure,
+HttpOnly cookie and CSRF controls.
+
+An authentication provider owns the session, protected routes send unauthenticated visitors to
+`/login`, and the requested URL is carried in router state and restored after successful login. The
+shared API client attaches the bearer token to every request. Logout removes the session, and any
+API `401` removes it globally so the route guard returns the user to login.
 
 ### Tests and verification
 
-**Not started.** Record authentication tests, migration verification, commit IDs, and time spent.
+Five API behaviour tests cover generic wrong-password/unknown-email responses, inactive agents,
+missing-token rejection, successful login, token acceptance, and the `/me` identity. Frontend tests
+cover bearer-token attachment and clearing the session on `401`. The full backend suite, frontend
+suite, lint, type-check, and production web build passed. The generated migration was also applied
+successfully to the local SQL Server database. Backend commit: `9a97aa1`. Frontend commit: `6d60df8`.
 
 ## Task 4 — API container
 
@@ -138,7 +162,9 @@ Update this section honestly before submission.
 ### Tools and purposes
 
 - Codex was used to inspect the starter repository, compare it with the assignment, identify the initial DEFECT-117 root cause, and create a step-by-step implementation plan.
-- Add any later AI tools and their specific purposes.
+- Codex was also used to implement Task 3 authentication, generate its EF migration, add behavioural
+  tests, diagnose test-host configuration, and update the reviewer documentation. Every generated
+  change was checked with repository builds, tests, lint, and type-checking.
 
 ### Verification workflow
 
@@ -162,16 +188,18 @@ The initial audit identified that the ticket-list effect omitted non-search filt
 
 ## Known limitations
 
-Keep this list truthful and limited to relevant exclusions, such as no registration, password reset, refresh tokens, MFA, roles, notifications, real-time updates or production deployment automation.
+- No registration, password reset, email verification, OAuth/SSO, refresh tokens, MFA, lockout,
+  rate limiting, or roles matrix; these are deliberately outside Task 3.
+- `localStorage` session persistence has an XSS token-theft trade-off.
+- Production HTTPS termination, secret rotation, and identity administration are not implemented.
 
 ## Time log
 
 | Work item | Started | Finished | Time spent | Notes |
 | --- | --- | --- | ---: | --- |
-| Repository setup | — | — | — | Not started |
 | DEFECT-117 | — | — | Not recorded | Complete; manual Network check remains |
 | Server filtering | — | — | Not recorded | Complete; manual SQL Server log check remains |
 | Task 2 | — | — | — | Not started |
-| Task 3 | — | — | — | Not started |
+| Task 3 | 2026-10-19 | 2026-10-19 | ~1 h | Implemented; automated verification complete |
 | Task 4 | — | — | — | Not started |
 | Documentation and verification | — | — | — | Not started |
