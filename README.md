@@ -39,6 +39,20 @@ Full requirements are in **[`ASSIGNMENT_CANDIDATE.md`](ASSIGNMENT_CANDIDATE.md)*
 3. Commit both, then send us the **link to your fork**, the **dev login credentials**, and a
    **rough note of time spent** on what. (If the fork is private, add the reviewers as collaborators.)
 
+## Candidate implementation notes
+
+### DEFECT-117
+
+The ticket-list request effect originally observed only search and paging values. Changes to
+status, priority, category, customer, assigned agent, unassigned-only, or sorting updated React
+state but did not trigger another API request. A later search change exposed the stale behaviour
+because it caused the request to run with all the latest filter values.
+
+The fix separates the debounced search value from the request filters. Search waits until typing
+settles, while dropdown, checkbox, sorting, and paging changes request tickets immediately. A
+regression test changes only the status filter and verifies that the request is sent immediately
+with `status=InProgress` and `page=1`.
+
 ---
 
 ## Quick start
