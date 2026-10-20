@@ -97,7 +97,11 @@ public sealed class TicketQueriesTests : IAsyncLifetime
         Assert.Equal("Contoso", ticket.Customer.Name);
     }
 
-    private TicketQueries CreateQueries() => new(_db, new FixedClock());
+    private TicketQueries CreateQueries() => new(
+        _db,
+        new FixedClock(),
+        new SupportDesk.Application.Features.Tickets.Triage.SlaPolicy(
+            SupportDesk.UnitTests.Application.Features.Tickets.Commands.TicketCommandTestContext.TestSlaOptions()));
 
     private async Task SeedAsync()
     {

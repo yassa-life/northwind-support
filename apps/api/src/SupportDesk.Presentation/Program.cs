@@ -9,6 +9,7 @@ using SupportDesk.Presentation.Extensions;
 using SupportDesk.Presentation.Filters;
 using SupportDesk.Presentation.Middleware;
 using SupportDesk.Presentation.Auth;
+using SupportDesk.Application.Features.Tickets.Triage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,18 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+var slaOptions = builder.Configuration.GetSection(SlaOptions.SectionName).Get<SlaOptions>()
+    ?? throw new InvalidOperationException("SLA configuration is missing.");
+if (slaOptions.BaseWindowHours.Count == 0 ||
+    slaOptions.BaseWindowHours.Values.Any(value => value <= 0) ||
+    slaOptions.PremiumCustomerMultiplier <= 0 ||
+    slaOptions.MinimumWindowHours <= 0 ||
+    slaOptions.AtRiskThresholdPercent is <= 0 or >= 100)
+{
+    throw new InvalidOperationException("SLA configuration contains invalid values.");
+}
+builder.Services.AddSingleton(slaOptions);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

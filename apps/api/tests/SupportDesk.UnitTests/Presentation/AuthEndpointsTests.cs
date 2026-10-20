@@ -142,6 +142,13 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Issuer", "SupportDesk.Tests");
         builder.UseSetting("Jwt:Audience", "SupportDesk.Tests.Client");
         builder.UseSetting("Jwt:LifetimeMinutes", "15");
+        builder.UseSetting("Sla:BaseWindowHours:Low", "72");
+        builder.UseSetting("Sla:BaseWindowHours:Medium", "24");
+        builder.UseSetting("Sla:BaseWindowHours:High", "8");
+        builder.UseSetting("Sla:BaseWindowHours:Critical", "4");
+        builder.UseSetting("Sla:PremiumCustomerMultiplier", "0.5");
+        builder.UseSetting("Sla:MinimumWindowHours", "1");
+        builder.UseSetting("Sla:AtRiskThresholdPercent", "25");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IAgentRepository>();

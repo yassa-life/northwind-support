@@ -43,6 +43,12 @@ public sealed class Ticket : AggregateRoot
     /// <summary>When the team has committed to responding by. Null when no SLA applies.</summary>
     public DateTime? DueAtUtc { get; private set; }
 
+    /// <summary>Start of the current SLA window. It changes only on creation or escalation.</summary>
+    public DateTime? SlaStartedAtUtc { get; private set; }
+
+    /// <summary>Configured length of the current SLA window, used to derive At Risk in SQL.</summary>
+    public int? SlaWindowMinutes { get; private set; }
+
     public DateTime? ResolvedAtUtc { get; private set; }
 
     /// <summary>True while the ticket still needs work from an agent.</summary>
@@ -110,5 +116,76 @@ public sealed class Ticket : AggregateRoot
     {
         AssignedAgentId = agentId;
         UpdatedAtUtc = nowUtc;
+    }
+
+    public void ApplyTriage(
+        TicketPriority priority,
+        DateTime dueAtUtc,
+        int slaWindowMinutes,
+        int? agentId,
+        DateTime nowUtc)
+    {
+        Priority = priority;
+        DueAtUtc = dueAtUtc;
+        SlaStartedAtUtc = nowUtc;
+        SlaWindowMinutes = slaWindowMinutes;
+        AssignedAgentId = agentId;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public TicketPriority GetEscalatedPriority()
+    {
+        EnsureCanEscalate();
+        return (TicketPriority)((int)Priority + 1);
+    }
+
+    public TicketEscalation Escalate(
+        TicketPriority priority,
+        DateTime dueAtUtc,
+        int slaWindowMinutes,
+        int? agentId,
+        string reason,
+        string escalatedBy,
+        DateTime nowUtc)
+    {
+        var expectedPriority = GetEscalatedPriority();
+        if (priority != expectedPriority)
+        {
+            throw new BusinessRuleViolationException(
+                $"Ticket {Reference} must be escalated exactly one priority level to {expectedPriority}.");
+        }
+
+        var history = new TicketEscalation(
+            Id,
+            Priority,
+            priority,
+            AssignedAgentId,
+            agentId,
+            DueAtUtc,
+            dueAtUtc,
+            reason,
+            escalatedBy,
+            nowUtc);
+
+        Priority = priority;
+        DueAtUtc = dueAtUtc;
+        SlaStartedAtUtc = nowUtc;
+        SlaWindowMinutes = slaWindowMinutes;
+        AssignedAgentId = agentId;
+        UpdatedAtUtc = nowUtc;
+        return history;
+    }
+
+    private void EnsureCanEscalate()
+    {
+        if (Priority == TicketPriority.Critical)
+        {
+            throw new BusinessRuleViolationException($"Ticket {Reference} is already Critical and cannot be escalated.");
+        }
+
+        if (!IsOpen)
+        {
+            throw new BusinessRuleViolationException($"Ticket {Reference} is {Status} and cannot be escalated.");
+        }
     }
 }

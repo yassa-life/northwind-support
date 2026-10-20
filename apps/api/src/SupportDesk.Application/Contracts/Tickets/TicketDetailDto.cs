@@ -35,4 +35,12 @@ public sealed class TicketDetailDto
 
     /// <summary>Derived from the dates above; never stored.</summary>
     public SlaStatus SlaStatus { get; set; }
+
+    /// <summary>Present on the create response to explain the automatic decisions.</summary>
+    public TriageDecisionDto? Triage { get; set; }
 }
+
+public sealed record TriageDecisionDto(
+    string PriorityReason,
+    string SlaReason,
+    string AssignmentReason);
