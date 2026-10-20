@@ -63,6 +63,26 @@ title, reference, and customer name, while blank search text is ignored.
 SQLite query tests cover exact priority, combined filters, customer-name search, and filtered
 counts without requiring the development SQL Server.
 
+### Ticket triage, SLA and escalation
+
+Creating a ticket now performs automatic triage. Requested priority defaults to Medium, while flagged
+categories force Critical. SLA windows are configurable (Low 72 h, Medium 24 h, High 8 h, Critical 4 h),
+Premium customers receive half the window with a one-hour minimum, and the response explains every decision.
+
+Assignment considers only active agents below their open-ticket capacity. Specialist categories require the
+matching specialization; the lowest open-ticket count wins, with agent ID as the deterministic tie-break.
+If nobody is eligible, the ticket remains unassigned and the explanation says so.
+
+SLA state is derived as `NotApplicable`, `WithinSla`, `AtRisk`, `Breached`, or `Met`. A dedicated SLA start timestamp and
+window length are stored because ordinary edits change `UpdatedAtUtc` and must not restart the clock. At Risk
+begins when exactly 25% of the current window remains. The SLA Status list filter is applied in SQL before
+counting and paging.
+
+Agents can escalate non-terminal, non-Critical tickets with a 5–500 character reason. Escalation raises
+priority by one level, starts a new SLA window from the escalation time, re-evaluates assignment, and appends
+an immutable audit record containing before/after priority, assignee and due date plus the authenticated actor.
+The detail UI refreshes the ticket and history after success and shows validation or business-rule errors.
+
 ### Login and authentication
 
 Agents authenticate with their existing email and a one-way ASP.NET Identity password hash stored
@@ -127,7 +147,9 @@ used outside local development.
 npm test                      # dotnet test, then the web tests (Vitest)
 ```
 
-Both pass on a clean checkout and neither needs a database.
+The complete verified result is 55 unit tests, 4 architecture tests and 12 frontend tests. ESLint and the
+production TypeScript/Vite build also pass. Automated tests do not need a database; the Task 2 migration and
+live create/filter/escalate/history workflow were additionally verified against local SQL Server.
 
 ## Commands
 
@@ -145,10 +167,12 @@ Both pass on a clean checkout and neither needs a database.
 | --- | --- |
 | `POST /api/auth/login` | Public login; returns a JWT, expiry, and agent details |
 | `GET /api/auth/me` | Current authenticated agent |
-| `GET /api/tickets` | Paged list with `search`, `status`, `priority`, `categoryId`, `customerId`, `assignedAgentId`, `unassignedOnly`, `sortBy`, `sortDirection`. Filters are applied before counting and paging. |
+| `GET /api/tickets` | Paged list with `search`, `status`, `priority`, `slaStatus`, `categoryId`, `customerId`, `assignedAgentId`, `unassignedOnly`, `sortBy`, `sortDirection`. Filters are applied before counting and paging. |
 | `GET /api/tickets/{id}` | One ticket |
-| `POST /api/tickets` | Create a ticket |
+| `POST /api/tickets` | Create and automatically triage a ticket; returns decision explanations |
 | `PATCH /api/tickets/{id}/status` · `/assignment` | Change status / assignee |
+| `POST /api/tickets/{id}/escalate` | Raise priority, restart SLA, re-evaluate assignment and append history |
+| `GET /api/tickets/{id}/escalations` | Newest-first immutable escalation history |
 | `GET /api/customers` · `/api/agents` · `/api/categories` | Reference data |
 
 Errors are `ProblemDetails`: `400` validation, `404` not found, `409` conflict or business rule.
@@ -164,6 +188,8 @@ and 40 tickets across every status, priority and SLA state.
 - The browser token storage is intentionally simple and has the XSS trade-off described above.
 - HTTPS termination, secret rotation, and production identity administration are deployment concerns
   and are not implemented in this local exercise.
+- SLA clocks use wall-clock hours rather than business calendars; notifications and automatic background
+  escalation are outside Task 2.
 
 ## Troubleshooting
 

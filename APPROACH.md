@@ -8,7 +8,7 @@ This document is a live implementation report. Update it as work is completed. S
 | --- | --- | --- |
 | DEFECT-117 regression test and fix | Complete | `6efc6ae` |
 | FL-1 to FL-6 server-side filtering | Complete | `38ffa16` |
-| Task 2 triage, SLA and escalation | Not started | — |
+| Task 2 triage, SLA and escalation | Complete | `fb97859`, `17685d4` |
 | Task 3 authentication | Complete | `9a97aa1`, `6d60df8` |
 | Task 4 API container | Not started | — |
 | Final README and verification | Not started | — |
@@ -77,27 +77,61 @@ both exited successfully. Commit: `38ffa16`. Time was not recorded and must not 
 
 ### Business-rule design
 
-**Not started.** Explain how priority, SLA windows, premium adjustment, specialist eligibility, capacity and deterministic assignment are represented in small reusable units.
+The rules are split into three small policies so creation and escalation use the same logic. `PriorityPolicy`
+uses the requested priority (Medium when omitted) unless the category forces Critical. `SlaPolicy` reads
+configurable Low/Medium/High/Critical windows of 72/24/8/4 hours and halves the window for Premium
+customers, with a one-hour minimum. `AssignmentPolicy` asks the repository only for active, eligible
+agents below capacity and chooses the candidate with the fewest open tickets.
+
+Each decision returns a short explanation. The create response includes the priority, SLA and assignment
+explanations so the UI can tell the agent why the automatic triage result was chosen.
 
 ### SLA-window start decision
 
-**Decision required.** At Risk needs the start of the current SLA window. Explain whether a dedicated timestamp is stored or the start is derived from creation/latest escalation time. Explain why `UpdatedAtUtc` is unsuitable.
+A dedicated `SlaStartedAtUtc` and the selected `SlaWindowMinutes` are stored on each ticket. Creation starts
+the first window and escalation starts a new one. This makes the 25% At Risk boundary exact and preserves
+the effective configured window even if configuration changes later. `UpdatedAtUtc` was rejected because
+ordinary changes such as assignment or status would incorrectly restart the SLA clock.
 
 ### Agent-selection decisions
 
-**Not started.** Record the deterministic tie-break and how open-ticket counts and specialist requirements are evaluated.
+The SQL query filters to active agents, requires a matching specialization when the category needs one,
+counts only non-Resolved/non-Closed tickets, and excludes agents whose open count has reached their maximum.
+It orders by open count and then agent ID, giving a stable deterministic tie-break. On escalation the same
+policy re-evaluates ownership; when no eligible agent exists the ticket remains unassigned and the response
+explains why.
 
 ### Escalation persistence
 
-**Not started.** Describe the escalation table, Ticket ID index, field sizes, optional fields, and delete behaviour.
+`TicketEscalations` stores the ticket, before/after priority, optional before/after agent IDs, optional
+before/after due dates, reason (maximum 500 characters), actor (maximum 100), and UTC timestamp. A composite
+index on `(TicketId, EscalatedAtUtc)` supports the history view. Ticket and agent foreign keys use Restrict
+so audit history cannot disappear through a cascade delete. Escalations are append-only through the exposed
+application API.
 
 ### API and frontend
 
-**Not started.** Record endpoints, status codes, UI behaviour, refresh behaviour and error handling.
+`POST /api/tickets/{id}/escalate` validates a 5–500 character reason, takes the actor from the JWT, raises
+priority one level, restarts the SLA from the current time, re-runs assignment and returns the ticket plus
+the new audit entry. Critical, Resolved and Closed tickets return `409`; invalid requests return `400` and
+missing tickets return `404`. `GET /api/tickets/{id}/escalations` returns newest-first history.
+
+The list has an SLA Status filter that remains SQL-side. The detail screen shows a reason field, disables the
+action while saving, displays API errors, refreshes the ticket after success and reloads immutable history.
+The create screen displays the three triage explanations returned by the API.
 
 ### Tests and verification
 
-**Not started.** Record all boundary and rule tests, migration verification, commit IDs, and time spent.
+Backend tests cover all eight Standard/Premium SLA combinations, the one-hour floor, forced Critical priority,
+specialist/capacity selection, deterministic selection, no-candidate handling, escalation before/after values,
+Critical rejection, terminal-state rejection, and SLA boundaries (including exactly 25%). Frontend tests cover
+all five SLA labels, short-reason validation and `409` error display.
+
+Final verification passed: 55 unit tests, 4 architecture tests, 12 frontend tests, ESLint, TypeScript/production
+build, migration application, and a live SQL Server workflow. The live check created `TCK-0041`, confirmed
+automatic Premium/specialist triage, escalated Low → Medium → High, returned two ordered history entries with
+the authenticated actor, and successfully executed the At Risk filter in SQL. Backend commit: `fb97859`.
+Frontend commit: `17685d4`. Approximate active Task 2 time: 2.5 hours.
 
 ## Task 3 — authentication
 
@@ -167,6 +201,8 @@ Update this section honestly before submission.
 - Codex was also used to implement Task 3 authentication, generate its EF migration, add behavioural
   tests, diagnose test-host configuration, and update the reviewer documentation. Every generated
   change was checked with repository builds, tests, lint, and type-checking.
+- Codex was used for Task 2 to implement the triage policies, escalation audit flow, SLA UI, tests and
+  migration, and to diagnose two EF Core query-translation issues found during live SQL Server verification.
 
 ### Verification workflow
 
@@ -201,7 +237,7 @@ The initial audit identified that the ticket-list effect omitted non-search filt
 | --- | --- | --- | ---: | --- |
 | DEFECT-117 | — | — | Not recorded | Complete; manual Network check remains |
 | Server filtering | — | — | Not recorded | Complete; manual SQL Server log check remains |
-| Task 2 | — | — | — | Not started |
+| Task 2 | 2026-10-19 | 2026-10-20 | ~2.5 h | Complete; automated and live SQL Server verification passed |
 | Task 3 | 2026-10-19 | 2026-10-19 | ~1 h | Implemented; automated verification complete |
 | Task 4 | — | — | — | Not started |
 | Documentation and verification | — | — | — | Not started |
