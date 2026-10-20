@@ -454,6 +454,34 @@ textarea[aria-invalid='true'] {
   border-left: 4px solid var(--colour-primary);
 }
 
+.triage-result {
+  margin: 16px 0;
+  padding: 14px;
+  border-left: 4px solid var(--colour-primary);
+  background: var(--colour-info-bg);
+}
+
+.triage-result p {
+  margin: 6px 0;
+}
+
+.history-list {
+  display: grid;
+  gap: 14px;
+  padding-left: 20px;
+}
+
+.history-list li {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--colour-border);
+}
+
+.history-list span,
+.history-list small {
+  display: block;
+  color: var(--colour-muted);
+}
+
 .pagination {
   display: flex;
   align-items: center;
