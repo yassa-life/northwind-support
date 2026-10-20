@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using SupportDesk.Application.Abstractions;
 using SupportDesk.Domain.Aggregates.Agents;
@@ -17,13 +18,21 @@ namespace SupportDesk.Infrastructure.Data;
 /// Every aggregate is built through its own behaviour. The two historical values no behaviour
 /// produces - a ticket's last update and its due date - are set through EF Core directly.
 /// </remarks>
-public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<SupportDbSeeder> logger)
+public sealed class SupportDbSeeder(
+    SupportDbContext db,
+    IClock clock,
+    IPasswordHasher<Agent> passwordHasher,
+    ILogger<SupportDbSeeder> logger)
 {
+    public const string DevelopmentPassword = "LocalAgent123!";
+
     /// <summary>Seeds the database, unless it already has tickets in it.</summary>
     public async Task SeedAsync(CancellationToken ct = default)
     {
         if (await db.Set<Ticket>().AnyAsync(ct))
         {
+            await AddMissingDevelopmentPasswordHashesAsync(ct);
+            await AddMissingSlaWindowDataAsync(ct);
             logger.LogInformation("Seed data already present; skipping.");
             return;
         }
@@ -33,6 +42,11 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
         var categories = SeedCategories();
         var customers = SeedCustomers(now);
         var agents = SeedAgents(now);
+
+        foreach (var agent in agents)
+        {
+            agent.SetPasswordHash(passwordHasher.HashPassword(agent, DevelopmentPassword));
+        }
 
         db.AddRange(categories);
         db.AddRange(customers);
@@ -48,6 +62,24 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
         logger.LogInformation(
             "Seeded {Categories} categories, {Customers} customers, {Agents} agents and {Tickets} tickets.",
             categories.Count, customers.Count, agents.Count, await db.Set<Ticket>().CountAsync(ct));
+    }
+
+    private async Task AddMissingDevelopmentPasswordHashesAsync(CancellationToken ct)
+    {
+        var agents = await db.Set<Agent>()
+            .Where(agent => agent.PasswordHash == string.Empty)
+            .ToListAsync(ct);
+
+        foreach (var agent in agents)
+        {
+            agent.SetPasswordHash(passwordHasher.HashPassword(agent, DevelopmentPassword));
+        }
+
+        if (agents.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Added development password hashes for {Agents} existing agents.", agents.Count);
+        }
     }
 
     private static List<Category> SeedCategories() =>
@@ -195,6 +227,28 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
             entry.Property(t => t.UpdatedAtUtc).CurrentValue =
                 createdAtUtc.AddMinutes(row.ResolvedAfterMinutes ?? row.CreatedMinutesAgo / 2);
             entry.Property(t => t.DueAtUtc).CurrentValue = createdAtUtc.AddMinutes(row.SlaWindowMinutes);
+            entry.Property(t => t.SlaStartedAtUtc).CurrentValue = createdAtUtc;
+            entry.Property(t => t.SlaWindowMinutes).CurrentValue = row.SlaWindowMinutes;
+        }
+    }
+
+    private async Task AddMissingSlaWindowDataAsync(CancellationToken ct)
+    {
+        var tickets = await db.Set<Ticket>()
+            .Where(ticket => ticket.DueAtUtc != null && ticket.SlaStartedAtUtc == null)
+            .ToListAsync(ct);
+
+        foreach (var ticket in tickets)
+        {
+            var minutes = (int)Math.Max(1, Math.Round((ticket.DueAtUtc!.Value - ticket.CreatedAtUtc).TotalMinutes));
+            db.Entry(ticket).Property(x => x.SlaStartedAtUtc).CurrentValue = ticket.CreatedAtUtc;
+            db.Entry(ticket).Property(x => x.SlaWindowMinutes).CurrentValue = minutes;
+        }
+
+        if (tickets.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Added SLA window metadata for {Tickets} existing tickets.", tickets.Count);
         }
     }
 

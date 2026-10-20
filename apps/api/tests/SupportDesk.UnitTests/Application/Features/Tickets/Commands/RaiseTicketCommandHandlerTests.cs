@@ -43,8 +43,8 @@ public class RaiseTicketCommandHandlerTests
     {
         var context = new TicketCommandTestContext();
         context.Customers
-            .Setup(c => c.ExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .Setup(c => c.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SupportDesk.Domain.Aggregates.Customers.Customer?)null);
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => context.RaiseTicket.HandleAsync(Request(), CancellationToken.None));

@@ -65,6 +65,15 @@ a {
   gap: 16px;
 }
 
+.app__account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  color: var(--colour-muted);
+  font-size: 0.9rem;
+}
+
 .app__nav a {
   text-decoration: none;
   padding: 4px 2px;
@@ -209,6 +218,44 @@ textarea[aria-invalid='true'] {
 
 .button--ghost:hover:not(:disabled) {
   background: var(--colour-page);
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 32px;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(31 36 48 / 10%);
+}
+
+.login-card__eyebrow {
+  margin: 0 0 6px;
+  color: var(--colour-primary);
+  font-weight: 700;
+}
+
+.login-card__intro {
+  margin: 6px 0 24px;
+  color: var(--colour-muted);
+}
+
+.login-card__error {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--colour-danger-bg);
+  color: var(--colour-danger-text);
+}
+
+.login-card__submit {
+  width: 100%;
 }
 
 .button-row {
@@ -405,6 +452,34 @@ textarea[aria-invalid='true'] {
 
 .notice {
   border-left: 4px solid var(--colour-primary);
+}
+
+.triage-result {
+  margin: 16px 0;
+  padding: 14px;
+  border-left: 4px solid var(--colour-primary);
+  background: var(--colour-info-bg);
+}
+
+.triage-result p {
+  margin: 6px 0;
+}
+
+.history-list {
+  display: grid;
+  gap: 14px;
+  padding-left: 20px;
+}
+
+.history-list li {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--colour-border);
+}
+
+.history-list span,
+.history-list small {
+  display: block;
+  color: var(--colour-muted);
 }
 
 .pagination {

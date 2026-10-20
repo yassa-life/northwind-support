@@ -1,9 +1,15 @@
 using System.Text.Json.Serialization;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using SupportDesk.Application;
 using SupportDesk.Infrastructure;
 using SupportDesk.Presentation.Extensions;
 using SupportDesk.Presentation.Filters;
 using SupportDesk.Presentation.Middleware;
+using SupportDesk.Presentation.Auth;
+using SupportDesk.Application.Features.Tickets.Triage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +33,61 @@ builder.Services.AddCors(options => options.AddPolicy(
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+var jwtOptions = jwtSection.Get<JwtOptions>()
+    ?? throw new InvalidOperationException("JWT configuration is missing. See .env.example.");
+
+if (jwtOptions.SigningKey.Length < 32)
+{
+    throw new InvalidOperationException("JWT signing key must be at least 32 characters.");
+}
+
+builder.Services
+    .AddOptions<JwtOptions>()
+    .Bind(jwtSection)
+    .Validate(options => options.SigningKey.Length >= 32, "SigningKey must be at least 32 characters.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "Issuer is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "Audience is required.")
+    .Validate(options => options.LifetimeMinutes > 0, "LifetimeMinutes must be positive.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+var slaOptions = builder.Configuration.GetSection(SlaOptions.SectionName).Get<SlaOptions>()
+    ?? throw new InvalidOperationException("SLA configuration is missing.");
+if (slaOptions.BaseWindowHours.Count == 0 ||
+    slaOptions.BaseWindowHours.Values.Any(value => value <= 0) ||
+    slaOptions.PremiumCustomerMultiplier <= 0 ||
+    slaOptions.MinimumWindowHours <= 0 ||
+    slaOptions.AtRiskThresholdPercent is <= 0 or >= 100)
+{
+    throw new InvalidOperationException("SLA configuration contains invalid values.");
+}
+builder.Services.AddSingleton(slaOptions);
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -45,6 +106,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(FrontendCorsPolicy);
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
+
+public partial class Program;

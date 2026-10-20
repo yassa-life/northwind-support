@@ -79,6 +79,13 @@ export interface TicketDetail {
   dueAtUtc: string | null;
   resolvedAtUtc: string | null;
   slaStatus: SlaStatus;
+  triage?: TriageDecision;
+}
+
+export interface TriageDecision {
+  priorityReason: string;
+  slaReason: string;
+  assignmentReason: string;
 }
 
 /** Everything the ticket list screen can narrow the results by. */
@@ -90,6 +97,7 @@ export interface TicketFilters {
   customerId?: number;
   assignedAgentId?: number;
   unassignedOnly?: boolean;
+  slaStatus?: SlaStatus;
   page: number;
   pageSize: number;
   sortBy: TicketSortField;
@@ -139,6 +147,25 @@ export interface CustomerDetail {
   tier: CustomerTier;
   createdAtUtc: string;
   tickets: TicketListItem[];
+}
+
+export interface TicketEscalation {
+  id: number;
+  ticketId: number;
+  fromPriority: TicketPriority;
+  toPriority: TicketPriority;
+  fromAgent: AgentSummary | null;
+  toAgent: AgentSummary | null;
+  fromDueAtUtc: string | null;
+  toDueAtUtc: string | null;
+  reason: string;
+  escalatedBy: string;
+  escalatedAtUtc: string;
+}
+
+export interface EscalationResult {
+  ticket: TicketDetail;
+  escalation: TicketEscalation;
 }
 
 /** RFC 7807 problem document, which is how the API reports every failure. */

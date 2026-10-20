@@ -8,4 +8,17 @@ namespace SupportDesk.Domain.Repositories;
 public interface IAgentRepository
 {
     Task<Agent?> GetByIdAsync(int id, CancellationToken ct);
+
+    Task<Agent?> GetByEmailAsync(string email, CancellationToken ct);
+
+    Task<IReadOnlyList<AgentCandidate>> GetAssignmentCandidatesAsync(
+        int categoryId,
+        bool requiresSpecialist,
+        CancellationToken ct);
 }
+
+public sealed record AgentCandidate(
+    int Id,
+    string FullName,
+    int OpenTicketCount,
+    int MaxOpenTickets);

@@ -43,6 +43,10 @@ describe('useTicketList', () => {
       await vi.advanceTimersByTimeAsync(300);
     });
 
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
     expect(getTickets).toHaveBeenCalledTimes(2);
     expect(getTickets).toHaveBeenLastCalledWith(
       expect.objectContaining({ search: 'invoice', page: 1 }),
@@ -50,5 +54,29 @@ describe('useTicketList', () => {
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.data?.items).toHaveLength(1);
+  });
+
+  it('requests tickets immediately when the status filter changes', async () => {
+    const { result } = renderHook(() => useTicketList());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(getTickets).toHaveBeenCalledTimes(1);
+    getTickets.mockClear();
+
+    act(() => {
+      result.current.updateFilters({ status: 'InProgress' });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(getTickets).toHaveBeenCalledTimes(1);
+    expect(getTickets).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'InProgress', page: 1 }),
+    );
   });
 });
