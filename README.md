@@ -5,6 +5,24 @@ and move them through their lifecycle.
 
 **.NET 10 Web API** + **React 19 / TypeScript** + **SQL Server**, in one monorepo.
 
+## Documentation map
+
+- **[`CODING_STORY.md`](CODING_STORY.md)** — the complete beginning-to-end coding story, written in
+  plain language with technical terms introduced in brackets. It explains the code, not how to run it.
+- **[`APPROACH.md`](APPROACH.md)** — implementation decisions, rejected alternatives, evidence, and
+  honest work status.
+- **[`ASSIGNMENT_CANDIDATE.md`](ASSIGNMENT_CANDIDATE.md)** — the original requirements.
+
+## Implementation status
+
+| Work | Status | Main commits |
+| --- | --- | --- |
+| DEFECT-117 and server-side filtering | Complete | `650b36d`, `171a598` |
+| Automatic triage, SLA, assignment, and escalation | Complete | `276f772`, `88f2e5d` |
+| Agent login and protected application | Complete | `26c79c7`, `26b6982` |
+| Optional API container | Not implemented | — |
+| Coding explanation and implementation report | Complete | `CODING_STORY.md`, `APPROACH.md` |
+
 ---
 
 ## The assignment
@@ -190,6 +208,16 @@ and 40 tickets across every status, priority and SLA state.
   and are not implemented in this local exercise.
 - SLA clocks use wall-clock hours rather than business calendars; notifications and automatic background
   escalation are outside Task 2.
+
+## AI usage
+
+Codex was used to inspect the starter code, trace DEFECT-117, and help implement the filtering,
+authentication, triage, SLA, escalation, migrations, tests, and documentation. Suggestions were
+reviewed against the requirements and checked with focused tests, full suites, lint, type checking,
+builds, migrations, and a live SQL Server workflow. One request-effect approach was changed after a
+React lint rule exposed a synchronous loading-state update. Two Entity Framework query shapes were
+also corrected when live SQL Server verification exposed translation problems. `CODING_STORY.md`
+explains the accepted design in learning-friendly language.
 
 ## Troubleshooting
 

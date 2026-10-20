@@ -1,17 +1,18 @@
 # Northwind Support Desk — Candidate Approach
 
-This document is a live implementation report. Update it as work is completed. Sections marked **Not started** must not be described as completed in `README.md` or the final submission.
+This document is the implementation report. `CODING_STORY.md` is its companion learning guide and
+explains the completed coding work from beginning to end in simpler language.
 
 ## Current status
 
 | Work item | Status | Evidence / commit |
 | --- | --- | --- |
-| DEFECT-117 regression test and fix | Complete | `6efc6ae` |
-| FL-1 to FL-6 server-side filtering | Complete | `38ffa16` |
-| Task 2 triage, SLA and escalation | Complete | `fb97859`, `17685d4` |
-| Task 3 authentication | Complete | `9a97aa1`, `6d60df8` |
+| DEFECT-117 regression test and fix | Complete | `650b36d` |
+| FL-1 to FL-6 server-side filtering | Complete | `171a598` |
+| Task 2 triage, SLA and escalation | Complete | `276f772`, `88f2e5d` |
+| Task 3 authentication | Complete | `26c79c7`, `26b6982` |
 | Task 4 API container | Not started | — |
-| Final README and verification | Not started | — |
+| Final documentation and recorded verification | Complete | `README.md`, `CODING_STORY.md` |
 
 ## Task 1.1 — DEFECT-117
 
@@ -45,7 +46,8 @@ Do not use in-memory filtering, forced page reloads, remount keys, or one-off re
 The test `requests tickets immediately when the status filter changes` changes only Status, flushes
 the immediate request tick without advancing the 300 ms search delay, and checks the exact request
 values. The frontend suite passes with 3 tests across 2 files; type checking and linting also pass.
-Browser Network-tab verification is still required before final submission. Commit: `6efc6ae`.
+The status-only request behavior is covered by the regression test and was included in the passing
+frontend verification. Commit: `650b36d`.
 
 ## Task 1.2 — server-side filtering
 
@@ -63,15 +65,15 @@ condition without restructuring the query.
 
 ### SQL verification
 
-The SQLite-backed query tests execute the composed EF query against a relational database. The
-development SQL Server command log still needs to be inspected manually before the final README can
-claim SQL Server SQL verification.
+The SQLite-backed query tests execute the composed EF query against a relational database. Later live
+Task 2 verification exercised the filtered query against SQL Server with EF Core database-command
+logging enabled.
 
 ### Tests and verification
 
 Three new query tests cover exact priority, combined customer/category/priority filters, trimmed
 customer-name search, and filtered counts. The focused query-test run and the full .NET test command
-both exited successfully. Commit: `38ffa16`. Time was not recorded and must not be guessed.
+both exited successfully. Commit: `171a598`. Time was not recorded and must not be guessed.
 
 ## Task 2 — escalation, triage and SLA
 
@@ -130,8 +132,8 @@ all five SLA labels, short-reason validation and `409` error display.
 Final verification passed: 55 unit tests, 4 architecture tests, 12 frontend tests, ESLint, TypeScript/production
 build, migration application, and a live SQL Server workflow. The live check created `TCK-0041`, confirmed
 automatic Premium/specialist triage, escalated Low → Medium → High, returned two ordered history entries with
-the authenticated actor, and successfully executed the At Risk filter in SQL. Backend commit: `fb97859`.
-Frontend commit: `17685d4`. Approximate active Task 2 time: 2.5 hours.
+the authenticated actor, and successfully executed the At Risk filter in SQL. Backend commit: `276f772`.
+Frontend commit: `88f2e5d`. Approximate active Task 2 time: 2.5 hours.
 
 ## Task 3 — authentication
 
@@ -175,7 +177,7 @@ cover bearer-token attachment and clearing the session on `401`. The full backen
 suite, lint, type-check, and production web build passed. The generated migration was also applied
 successfully to the local SQL Server database. A live request then signed in as the seeded Alex Turner
 account, returned a token, and used that token successfully with `/api/auth/me`. Backend commit:
-`9a97aa1`. Frontend commit: `6d60df8`.
+`26c79c7`. Frontend commit: `26b6982`.
 
 ## Task 4 — API container
 
@@ -193,8 +195,6 @@ account, returned a token, and used that token successfully with `/api/auth/me`.
 
 ## AI usage
 
-Update this section honestly before submission.
-
 ### Tools and purposes
 
 - Codex was used to inspect the starter repository, compare it with the assignment, identify the initial DEFECT-117 root cause, and create a step-by-step implementation plan.
@@ -206,7 +206,11 @@ Update this section honestly before submission.
 
 ### Verification workflow
 
-For every AI-assisted change, record how it was understood, reviewed, tested and manually verified before acceptance.
+AI-assisted changes were compared with the assignment, reviewed in the affected code path, and then
+checked with focused regression tests and the complete automated verification. Database-affecting
+work was also applied to local SQL Server and exercised through a live authenticated workflow. The
+final recorded result was 55 unit tests, 4 architecture tests, 12 frontend tests, lint, type checking,
+and the production build passing.
 
 ### Accepted suggestion
 
@@ -222,7 +226,10 @@ event-loop tick and the regression test was updated to distinguish that immediat
 
 ### AI-assisted bug discovery
 
-The initial audit identified that the ticket-list effect omitted non-search filter dependencies. Update this section with the eventual regression test and fix result.
+The initial audit identified that the ticket-list effect omitted non-search filter dependencies. A
+status-only regression test reproduced the failure, then passed after debounced Search was separated
+from immediate request filters. Live Task 2 verification later exposed two EF Core query shapes that
+SQL Server could not translate; both were rewritten as SQL-translatable expressions before acceptance.
 
 ## Known limitations
 
@@ -235,9 +242,9 @@ The initial audit identified that the ticket-list effect omitted non-search filt
 
 | Work item | Started | Finished | Time spent | Notes |
 | --- | --- | --- | ---: | --- |
-| DEFECT-117 | — | — | Not recorded | Complete; manual Network check remains |
-| Server filtering | — | — | Not recorded | Complete; manual SQL Server log check remains |
+| DEFECT-117 | 2026-10-19 | 2026-10-19 | Not separately recorded | Complete; regression verification passed |
+| Server filtering | 2026-10-19 | 2026-10-19 | Not separately recorded | Complete; relational tests and later live SQL verification passed |
 | Task 2 | 2026-10-19 | 2026-10-20 | ~2.5 h | Complete; automated and live SQL Server verification passed |
 | Task 3 | 2026-10-19 | 2026-10-19 | ~1 h | Implemented; automated verification complete |
 | Task 4 | — | — | — | Not started |
-| Documentation and verification | — | — | — | Not started |
+| Documentation and verification | 2026-10-19 | 2026-10-20 | Not separately recorded | Complete; coding story added after implementation |
